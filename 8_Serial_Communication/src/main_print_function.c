@@ -64,6 +64,7 @@ void send_string(char * string)
 	{
 		buffer.now_printing = true;
 		USART_Tx(USART0, buffer.data[buffer.tail++]);
+		buffer.tail = fix_overflow(buffer.tail);
 	}
 	INT_Enable();
 }
