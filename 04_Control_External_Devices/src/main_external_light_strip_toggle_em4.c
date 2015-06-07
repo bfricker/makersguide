@@ -21,15 +21,15 @@
 #include "em_gpio.h"
 #include "em_emu.h"
 
-#define LED_PORT	gpioPortD
-#define LED_PIN	14
-
-#define BUTTON_PORT	gpioPortB
-#define BUTTON_PIN	9
+#define LED_PORT			gpioPortE
+#define LED_PIN				2
 
 #define EM4_PORT			gpioPortC
 #define EM4_PIN				9
 #define EM4_WAKEUP_ENABLE	0x04	// Must change when changing w/u pin
+
+#define BUTTON_PORT			gpioPortB
+#define BUTTON_PIN			9
 
 void blink_one_cycle(void)
 {
@@ -51,7 +51,7 @@ void blink_one_cycle(void)
 void enter_em4(void)
 {
 	// Set PC9 as an input, used to wake the system
-	GPIO_PinModeSet(EM4_PORT, EM4_PIN, gpioModeInput, 0);
+	GPIO_PinModeSet(EM4_PORT, EM4_PIN, gpioModeInputPull, 1);
 
 	EMU_EM4Init_TypeDef em4_init = EMU_EM4INIT_DEFAULT;
 	EMU_EM4Init(&em4_init);
@@ -60,14 +60,18 @@ void enter_em4(void)
 	GPIO->CTRL = 1;
 	GPIO->EM4WUEN = EM4_WAKEUP_ENABLE;
 	GPIO->EM4WUPOL = 0;	// Low signal is button pushed state
-	GPIO->CMD = 1; 		// EM4WUCLR = 1, to clear all previous events
 
 	// Wait for the button to be released before we go to sleep
 	// or else we will immediately wake back up again
 	while (!GPIO_PinInGet(EM4_PORT, EM4_PIN))
 		;
 
-       EMU_EnterEM4();
+	// Add some delay to let the switch settle
+	for(volatile long i=0; i<100000; i++);
+
+	GPIO->CMD = 1; 		// EM4WUCLR = 1, to clear all previous events
+
+    EMU_EnterEM4();
 }
 
 
@@ -81,17 +85,25 @@ int main(void)
 
   CMU_ClockEnable(cmuClock_GPIO, true);
 
-  GPIO_PinModeSet(BUTTON_PORT, BUTTON_PIN, gpioModeInput, 0);
+  GPIO_PinModeSet(BUTTON_PORT, BUTTON_PIN, gpioModeInputPull, 1);
+
+  // Wait for the button to be released before we start blinking
+  // or else we will immediately go back to sleep
+  while (!GPIO_PinInGet(BUTTON_PORT, BUTTON_PIN))
+  		;
+
+  // Add some delay to let the switch settle
+  for(volatile long i=0; i<100000; i++);
 
   // The initial state of the button is high when not pushed
   bool past_button_state = 1;
-  // Start out not blinking
+  // Start out blinking at first
   bool blinking = true;
 
   while (1)
   {
 	  // Grab the state of the button, 1 for high voltage, 0 for low
-	  bool live_button_state = GPIO_PinInGet(gpioPortB, 9);
+	  bool live_button_state = GPIO_PinInGet(BUTTON_PORT, BUTTON_PIN);
 
 	  // Invert the blinking mode every time a button is pressed
 	  // which generates a low voltage on a pin
@@ -101,9 +113,8 @@ int main(void)
 
 		  // Invert the blinking mode, so that it is buffered and will
 		  // keep blinking/not blinking when the button is released
-		  blinking = ~blinking;
+		  blinking = !blinking;
 	  }
-
 
 	  // Reset the past state when the button is released
 	  if (live_button_state == 1)
@@ -122,4 +133,3 @@ int main(void)
 	  }
   }
 }
-
