@@ -21,8 +21,8 @@
 #include "em_gpio.h"
 #include "em_emu.h"
 
-#define LED_PORT			gpioPortE
-#define LED_PIN				2
+#define LED_PORT			gpioPortD
+#define LED_PIN				14
 
 #define EM4_PORT			gpioPortC
 #define EM4_PIN				9
