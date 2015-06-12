@@ -110,7 +110,7 @@ int main(void)
 	TIMER_Init(TIMER1, &timerInit);
 
 	// Wait for the timer to get going
-	while (TIMER1->CNT == 0)
+	while (TIMER1->CNT == 0) ;
 
 	// Enable LED output
 	GPIO_PinModeSet(LED_PORT, LED_PIN, gpioModePushPull, 0);

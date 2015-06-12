@@ -210,7 +210,7 @@ uint16_t get_time(uint16_t segment)
 {
 	if (segment == HOURS)
 	{
-		return RTC->CNT / 3600;
+		return RTC->CNT / 3600;  	// Translate seconds in RTC->CNT to hours
 	}
 	else if (segment == MINUTES)
 	{
@@ -421,10 +421,10 @@ int main(void)
 		DEBUG_BREAK;
 	}
 
-	enum program_modes { INIT, PROGRAM, ON, OFF };
+	typedef enum { INIT, PROGRAM, ON, OFF } program_modes;
 
-	uint16_t mode = INIT;
-	uint16_t last_mode = INIT;
+	program_modes mode = INIT;
+	program_modes last_mode = INIT;
 
 	while (1)
 	{
@@ -484,6 +484,7 @@ int main(void)
 				// Delay so that we don't get double presses
 				delay(BUTTON_DELAY);
 			}
+			break;
 		}
 	}
 }
@@ -548,19 +549,14 @@ void SysTick_Handler(void)
 	}
 
 	// Now take care of the virtual program button
-	// First clear any long presses that may be present
-	if (program_button.long_press)
-	{
-		if (!set_button.long_press && !adjust_button.long_press)
-		{
-			program_button.long_press = false;
-		}
-	}
-
-	// Now set a long press on the program button if other buttons are long
+	// Set a long press on the program button if other buttons are both long
 	if (set_button.long_press && adjust_button.long_press)
 	{
 		program_button.long_press = true;
+	}
+	else
+	{
+		program_button.long_press = false;
 	}
 }
 
@@ -568,19 +564,6 @@ void GPIO_EVEN_IRQHandler(void)
 {
 	// clear the interrupt
 	GPIO_IntClear(0xffff);
-
-//	uint32_t foo = SysTick->CTRL;
-//
-//	if (SysTick->CTRL == 0)
-//	{
-//		// Set 1ms SysTick
-//		if (SysTick_Config(CMU_ClockFreqGet(cmuClock_CORE) / 1000))
-//		{
-//			DEBUG_BREAK;
-//		}
-//	}
-//
-//	set_button.short_press = true;
 }
 
 void run_sprinkler()

@@ -225,13 +225,14 @@ int main(void)
 			GPIO_PinModeSet(LED_PORT, LED1_PIN, gpioModePushPull,  0);
 		}
 
+		// This is a test of the buttons and will not program the timer yet
 		if (program_button.long_press)
 		{
-			DEBUG_BREAK
-			delay(10);
+			DEBUG_BREAK			// This is our test case
+			delay(10);			// "Move to line" to here, release buttons
 			if (program_button.long_press)
 			{
-				DEBUG_BREAK
+				DEBUG_BREAK		// This should not occur
 			}
 		}
 	}
@@ -294,18 +295,13 @@ void SysTick_Handler(void)
 	}
 
 	// Now take care of the virtual program button
-	// First clear any long presses that may be present
-	if (program_button.long_press)
-	{
-		if (!set_button.long_press && !adjust_button.long_press)
-		{
-			program_button.long_press = false;
-		}
-	}
-
-	// Now set a long press on the program button if other buttons are long
+	// Set a long press on the program button if other buttons are both long
 	if (set_button.long_press && adjust_button.long_press)
 	{
 		program_button.long_press = true;
+	}
+	else
+	{
+		program_button.long_press = false;
 	}
 }
