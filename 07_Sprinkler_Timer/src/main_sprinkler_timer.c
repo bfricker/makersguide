@@ -147,8 +147,7 @@ void blink(uint16_t segment)
 	}
 }
 
-// Show the time segment given by segment_enum
-// if show is false, hide it
+// Hide the time segment given by segment_enum
 void hide_segment(uint16_t segment)
 {
 	if (segment == TIME)
@@ -179,6 +178,7 @@ void set_clock_time(int index, uint16_t hours, uint16_t minutes)
 	{
 		// Midnight is time zero
 		RTC_CounterReset();
+		// 3600 seconds per hour, 60 seconds per minute
 		RTC->CNT = hours * 3600 + minutes * 60;
 	}
 	else if (index == 1)
