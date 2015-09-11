@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="ASCII"?>
+<device:XMLDevice xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:device="http://www.silabs.com/sls/hc/document/device.ecore" name="EFM32WG990F256" partId="com.silabs.mcu.si32.efm32.efm32wg.efm32wg990f256">
+  <mode name="DefaultMode">
+    <property object="DefaultMode" propertyId="mode.diagramLocation" value="100, 100"/>
+    <property object="GPIO" propertyId="ABPeripheral.included" value="true"/>
+    <property object="HFXO" propertyId="ABPeripheral.included" value="true"/>
+    <property object="HFXO" propertyId="hfxo.circuitcharacteristics.calculatedclpf" value="12.50"/>
+    <property object="HFXO" propertyId="hfxo.result.rnegesrmaxratio" value="28.819"/>
+    <property object="I2C0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="LFXO" propertyId="ABPeripheral.included" value="true"/>
+    <property object="LFXO" propertyId="lfxo.circuitcharacteristics.calculatedclpf" value="12.50"/>
+    <property object="LFXO" propertyId="lfxo.recommendedoscillatorboostsettings.lfxoboostpercent" value="100%"/>
+    <property object="LFXO" propertyId="lfxo.result.rnegesrmaxratio" value="15.574"/>
+    <property object="PD6" propertyId="ports.settings.pinmode" value="Wired-and pullup filter"/>
+    <property object="PD7" propertyId="ports.settings.pinmode" value="Wired-and pullup filter"/>
+    <property object="PE10" propertyId="ports.settings.pinmode" value="Push-pull"/>
+    <property object="PE11" propertyId="ports.settings.pinmode" value="Input"/>
+    <property object="PORTIO" propertyId="portio.hfxo.enable.n" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.hfxo.enable.p" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.i2c0.enable.scl" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.i2c0.enable.sda" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.i2c0.location.i2c0" value="1"/>
+    <property object="PORTIO" propertyId="portio.usart0.enable.rx" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.usart0.enable.tx" value="Enabled"/>
+    <property object="USART0" propertyId="ABPeripheral.included" value="true"/>
+  </mode>
+  <modeTransition>
+    <property object="RESET &#x2192; DefaultMode" propertyId="modeTransition.target" value="DefaultMode"/>
+    <property object="RESET &#x2192; DefaultMode" propertyId="modeTransition.source" value="RESET"/>
+  </modeTransition>
+</device:XMLDevice>
