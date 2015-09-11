@@ -20,18 +20,18 @@
 #include "em_i2c.h"
 #include "utilities.h"
 
-#define DEBUG_BREAK			__asm__("BKPT #0");
-
-#define ADXL345_ADDRESS		0x53
-#define TX_ARRAY_SIZE		10
-#define RX_ARRAY_SIZE		10
+#define ADXL345_ADDRESS		0x53 << 1
+#define DEVICE_ID			0xE5
+#define CMD_ARRAY_SIZE		1
+#define DATA_ARRAY_SIZE		10
 
 // Globals for persistent storage
-uint8_t tx_array[TX_ARRAY_SIZE];
-uint8_t rx_array[RX_ARRAY_SIZE];
+uint8_t cmd_array[CMD_ARRAY_SIZE];
+uint8_t data_array[DATA_ARRAY_SIZE];
 
-// Used by the read/write and register_read functions
-void i2c_transfer(uint16_t device_addr, uint8_t tx_array[], uint8_t rx_array[], uint16_t tx_len, uint16_t rx_len, uint8_t flag)
+// Used by the read_register and write_register functions
+// data_array is read data for WRITE_READ and tx2 data for WRITE_WRITE
+void i2c_transfer(uint16_t device_addr, uint8_t cmd_array[], uint8_t data_array[], uint16_t cmd_len, uint16_t data_len, uint8_t flag)
 {
 	// Transfer structure
 	I2C_TransferSeq_TypeDef i2cTransfer;
@@ -40,10 +40,12 @@ void i2c_transfer(uint16_t device_addr, uint8_t tx_array[], uint8_t rx_array[], 
 	I2C_TransferReturn_TypeDef result;
 	i2cTransfer.addr          = device_addr;
 	i2cTransfer.flags         = flag;
-	i2cTransfer.buf[0].data   = tx_array;
-	i2cTransfer.buf[0].len    = tx_len;
-	i2cTransfer.buf[1].data   = rx_array;
-	i2cTransfer.buf[1].len    = rx_len;
+	i2cTransfer.buf[0].data   = cmd_array;
+	i2cTransfer.buf[0].len    = cmd_len;
+
+	// Note that WRITE_WRITE this is tx2 data
+	i2cTransfer.buf[1].data   = data_array;
+	i2cTransfer.buf[1].len    = data_len;
 
 	// Set up the transfer
 	result = I2C_TransferInit(I2C0, &i2cTransfer);
@@ -59,10 +61,13 @@ void i2c_transfer(uint16_t device_addr, uint8_t tx_array[], uint8_t rx_array[], 
 	}
 }
 
-void i2c_read_register(uint8_t reg_offset, uint8_t rx_array[], uint16_t rx_len)
+// Read a config register on an I2C device
+// Tailored for the ADX345 device only i.e. 1 byte of TX
+uint8_t i2c_read_register(uint8_t reg_offset)
 {
-	uint8_t tx_array[1] = {reg_offset};
-	i2c_transfer((ADXL345_ADDRESS << 1), tx_array, rx_array, 2, rx_len, I2C_FLAG_WRITE_READ);
+	cmd_array[0] = reg_offset;
+	i2c_transfer(ADXL345_ADDRESS, cmd_array, data_array, 1, 1, I2C_FLAG_WRITE_READ);
+	return data_array[0];
 }
 
 /**************************************************************************//**
@@ -81,9 +86,16 @@ int main(void)
 	I2C_Init_TypeDef i2cInit = I2C_INIT_DEFAULT;
 	I2C_Init(I2C0, &i2cInit);
 
-	i2c_read_register(0, rx_array, 5);
+	// Offset zero is Device ID
+	uint16_t value = i2c_read_register(0);
 
-	/* Infinite loop */
+	// Set an LED on the Starter Kit if success
+	if (value == DEVICE_ID)
+	{
+		set_led(1,1);
+	}
+
+	// Infinite loop
 	while (1) {
   }
 }
