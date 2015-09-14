@@ -79,7 +79,7 @@ int main(void)
 
 	enter_DefaultMode_from_RESET();
 
-	setup_utilities();
+	setup_utilities(USART1);
 
 	delay(100);
 
