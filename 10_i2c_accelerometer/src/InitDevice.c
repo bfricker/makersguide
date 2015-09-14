@@ -32,7 +32,7 @@ extern void enter_DefaultMode_from_RESET(void) {
 	CMU_enter_DefaultMode_from_RESET();
 	HFXO_enter_DefaultMode_from_RESET();
 	LFXO_enter_DefaultMode_from_RESET();
-	USART0_enter_DefaultMode_from_RESET();
+	USART1_enter_DefaultMode_from_RESET();
 	I2C0_enter_DefaultMode_from_RESET();
 	PORTIO_enter_DefaultMode_from_RESET();
 	// [Config Calls]$
@@ -57,8 +57,8 @@ extern void CMU_enter_DefaultMode_from_RESET(void) {
 	/* Enable clock for I2C0 */
 	CMU_ClockEnable(cmuClock_I2C0, true);
 
-	/* Enable clock for USART0 */
-	CMU_ClockEnable(cmuClock_USART0, true);
+	/* Enable clock for USART1 */
+	CMU_ClockEnable(cmuClock_USART1, true);
 
 	/* Enable clock for GPIO by default */
 	CMU_ClockEnable(cmuClock_GPIO, true);
@@ -234,6 +234,22 @@ extern void OPAMP2_enter_DefaultMode_from_RESET(void) {
 //================================================================================
 extern void USART0_enter_DefaultMode_from_RESET(void) {
 	// $[USART_InitAsync]
+	// [USART_InitAsync]$
+
+	// $[USART_InitSync]
+	// [USART_InitSync]$
+
+	// $[USART_InitPrsTrigger]
+	// [USART_InitPrsTrigger]$
+
+
+}
+
+//================================================================================
+// USART1_enter_DefaultMode_from_RESET
+//================================================================================
+extern void USART1_enter_DefaultMode_from_RESET(void) {
+	// $[USART_InitAsync]
 	USART_InitAsync_TypeDef initasync = USART_INITASYNC_DEFAULT;
 
 	initasync.baudrate             = 115200;
@@ -247,7 +263,7 @@ extern void USART0_enter_DefaultMode_from_RESET(void) {
 	initasync.prsRxCh              = 0;
 	#endif
 
-	USART_InitAsync(USART0, &initasync);
+	USART_InitAsync(USART1, &initasync);
 	// [USART_InitAsync]$
 
 	// $[USART_InitSync]
@@ -260,23 +276,7 @@ extern void USART0_enter_DefaultMode_from_RESET(void) {
 	initprs.txTriggerEnable        = 0;
 	initprs.prsTriggerChannel      = usartPrsTriggerCh0;
 
-	USART_InitPrsTrigger(USART0, &initprs);
-	// [USART_InitPrsTrigger]$
-
-
-}
-
-//================================================================================
-// USART1_enter_DefaultMode_from_RESET
-//================================================================================
-extern void USART1_enter_DefaultMode_from_RESET(void) {
-	// $[USART_InitAsync]
-	// [USART_InitAsync]$
-
-	// $[USART_InitSync]
-	// [USART_InitSync]$
-
-	// $[USART_InitPrsTrigger]
+	USART_InitPrsTrigger(USART1, &initprs);
 	// [USART_InitPrsTrigger]$
 
 
@@ -563,22 +563,21 @@ extern void PORTIO_enter_DefaultMode_from_RESET(void) {
 
 
 	// $[Port D Configuration]
+	/* Pin PD0 is configured to Push-pull */
+	GPIO->P[3].MODEL = (GPIO->P[3].MODEL & ~_GPIO_P_MODEL_MODE0_MASK) | GPIO_P_MODEL_MODE0_PUSHPULL;
+
+	/* Pin PD1 is configured to Input enabled */
+	GPIO->P[3].MODEL = (GPIO->P[3].MODEL & ~_GPIO_P_MODEL_MODE1_MASK) | GPIO_P_MODEL_MODE1_INPUT;
 
 //	/* Pin PD6 is configured to Open-drain with pull-up and filter */
 //	GPIO->P[3].MODEL = (GPIO->P[3].MODEL & ~_GPIO_P_MODEL_MODE6_MASK) | GPIO_P_MODEL_MODE6_WIREDANDPULLUPFILTER;
 //
 //	/* Pin PD7 is configured to Open-drain with pull-up and filter */
 //	GPIO->P[3].MODEL = (GPIO->P[3].MODEL & ~_GPIO_P_MODEL_MODE7_MASK) | GPIO_P_MODEL_MODE7_WIREDANDPULLUPFILTER;
-//	// [Port D Configuration]$
+	// [Port D Configuration]$
 
 
 	// $[Port E Configuration]
-
-	/* Pin PE10 is configured to Push-pull */
-	GPIO->P[4].MODEH = (GPIO->P[4].MODEH & ~_GPIO_P_MODEH_MODE10_MASK) | GPIO_P_MODEH_MODE10_PUSHPULL;
-
-	/* Pin PE11 is configured to Input enabled */
-	GPIO->P[4].MODEH = (GPIO->P[4].MODEH & ~_GPIO_P_MODEH_MODE11_MASK) | GPIO_P_MODEH_MODE11_INPUT;
 	// [Port E Configuration]$
 
 
@@ -597,9 +596,14 @@ extern void PORTIO_enter_DefaultMode_from_RESET(void) {
 	/* Module PCNT0 is configured to location 1 */
 	PCNT0->ROUTE = (PCNT0->ROUTE & ~_PCNT_ROUTE_LOCATION_MASK) | PCNT_ROUTE_LOCATION_LOC1;
 
+	/* Module USART1 is configured to location 1 */
+	USART1->ROUTE = (USART1->ROUTE & ~_USART_ROUTE_LOCATION_MASK) | USART_ROUTE_LOCATION_LOC1;
+
 	/* Enable signals RX, TX */
-	USART0->ROUTE |= USART_ROUTE_RXPEN | USART_ROUTE_TXPEN;
+	USART1->ROUTE |= USART_ROUTE_RXPEN | USART_ROUTE_TXPEN;
 	// [Route Configuration]$
+
+// Relocated from above...
 
 	/* Pin PD6 is configured to Open-drain with pull-up and filter */
 	GPIO->P[3].MODEL = (GPIO->P[3].MODEL & ~_GPIO_P_MODEL_MODE6_MASK) | GPIO_P_MODEL_MODE6_WIREDANDPULLUPFILTER;

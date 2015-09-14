@@ -101,6 +101,30 @@ typedef enum
   ADXL345_RANGE_2_G           = 0b00    // +/- 2g (default value)
 } range_t;
 
+typedef enum
+{
+	ADXL345_INT_Overrun			= 1 << 0,
+	ADXL345_INT_Watermark		= 1 << 1,
+	ADXL345_INT_FREE_FALL		= 1 << 2,
+	ADXL345_INT_Inactivity		= 1 << 3,
+	ADXL345_INT_Activity		= 1 << 4,
+	ADXL345_INT_DOUBLE_TAP		= 1 << 5,
+	ADXL345_INT_SINGLE_TAP		= 1 << 6,
+	ADXL345_INT_DATA_READY		= 1 << 7
+} int_map_t;
+
+typedef enum
+{
+	ADXL345_ACT_ac_dc		= 1 << 7,
+	ADXL345_ACT_X			= 1 << 6,
+	ADXL345_ACT_Y			= 1 << 5,
+	ADXL345_ACT_Z			= 1 << 4,
+	ADXL345_INACT_ac_dc		= 1 << 3,
+	ADXL345_INACT_X			= 1 << 2,
+	ADXL345_INACT_Y			= 1 << 1,
+	ADXL345_INACT_Z			= 1 << 0
+} act_map_t;
+
 // Commenting out Arduino/C++ function prototypes...
 //
 //class Adafruit_ADXL345_Unified : public Adafruit_Sensor {

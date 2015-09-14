@@ -12,8 +12,11 @@
 #include "em_usart.h"
 #include "em_int.h"
 #include "utilities.h"
+#include "gpiointerrupt.h"
 
 volatile uint32_t msTicks = 0;
+USART_TypeDef *utility_usart;
+bool gpio_interrupts_configured = false;
 
 #define PRINT_BUFFER_SIZE	1024
 typedef struct print_buffer
@@ -56,7 +59,7 @@ void send_string(char * string)
 	if (!buffer.now_printing)
 	{
 		buffer.now_printing = true;
-		USART_Tx(USART0, buffer.data[buffer.tail++]);
+		USART_Tx(utility_usart, buffer.data[buffer.tail++]);
 		buffer.tail = fix_overflow(buffer.tail);
 	}
 	INT_Enable();
@@ -121,18 +124,34 @@ void set_led(int number, int level)
 }
 
 
-void setup_utilities()
+void setup_utilities(USART_TypeDef *usart)
 {
 	if (SysTick_Config(CMU_ClockFreqGet(cmuClock_CORE) / 1000))
 	{
 		DEBUG_BREAK;
 	}
 
+	utility_usart = usart;
+
 	// Enable USART0 ints
-	USART_IntClear(USART0, USART_IF_TXC);
-	USART_IntEnable(USART0, USART_IF_TXC);
-	NVIC_ClearPendingIRQ(USART0_TX_IRQn);
-	NVIC_EnableIRQ(USART0_TX_IRQn);
+	USART_IntClear(utility_usart, USART_IF_TXC);
+	USART_IntEnable(utility_usart, USART_IF_TXC);
+
+	IRQn_Type irq;
+	if (utility_usart == USART0)
+	{
+		irq = USART0_TX_IRQn;
+	}
+	else if (utility_usart == USART1)
+	{
+		irq = USART1_TX_IRQn;
+	}
+	else
+	{
+		DEBUG_BREAK  // USART out of range
+	}
+	NVIC_ClearPendingIRQ(irq);
+	NVIC_EnableIRQ(irq);
 
 	// Note: Must configure USART0 pins and clocks elsewhere!
 }
@@ -142,21 +161,53 @@ void SysTick_Handler(void)
 	msTicks++;
 }
 
+
+void common_usart_handler()
+{
+	if (utility_usart->IF & USART_IF_TXC)
+	// This flag is not automatically cleared like RXDATAV
+	USART_IntClear(utility_usart, USART_IF_TXC);
+
+	if (buffer.tail != buffer.head)
+	{
+		USART_Tx(utility_usart, buffer.data[buffer.tail++]);
+		buffer.tail = fix_overflow(buffer.tail);
+	}
+	else
+	{
+		buffer.now_printing = false;
+	}
+}
+
 void USART0_TX_IRQHandler(void)
 {
-	if (USART0->IF & USART_IF_TXC)
-	{
-		// This flag is not automatically cleared like RXDATAV
-		USART_IntClear(USART0, USART_IF_TXC);
+	common_usart_handler();
+}
 
-		if (buffer.tail != buffer.head)
-		{
-			USART_Tx(USART0, buffer.data[buffer.tail++]);
-			buffer.tail = fix_overflow(buffer.tail);
-		}
-		else
-		{
-			buffer.now_printing = false;
-		}
+void USART1_TX_IRQHandler(void)
+{
+	common_usart_handler();
+}
+
+// Enables the GPIO pin and sets up interrupts
+// Sends control back to your own function in callbackPtr when it occurs
+// Function prototype is like this: int GPIO_int_callback(uint8_t pin)
+// Interrupts are automatically cleared before the callback is returned
+void set_gpio_interrupt(uint8_t port, uint8_t pin, bool rising_edge, bool falling_edge, GPIOINT_IrqCallbackPtr_t callbackPtr)
+{
+	if (!gpio_interrupts_configured)
+	{
+		GPIOINT_Init();
+		gpio_interrupts_configured = true;
 	}
+
+	// Enable the GPIO and filter with the 1 on DOUT
+	GPIO_PinModeSet(port, pin, gpioModeInput, 1);
+
+	// Register the callback function
+	GPIOINT_CallbackRegister(pin, callbackPtr);
+
+	//(port, pin, risingEdge, fallingEdge, enable)
+	GPIO_IntConfig(port, pin, rising_edge, falling_edge, true);
+	GPIO_IntEnable( 1<<pin);
 }

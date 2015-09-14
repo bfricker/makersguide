@@ -20,9 +20,10 @@
     <property object="PORTIO" propertyId="portio.i2c0.enable.scl" value="Enabled"/>
     <property object="PORTIO" propertyId="portio.i2c0.enable.sda" value="Enabled"/>
     <property object="PORTIO" propertyId="portio.i2c0.location.i2c0" value="1"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.rx" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.tx" value="Enabled"/>
-    <property object="USART0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="PORTIO" propertyId="portio.usart1.enable.rx" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.usart1.enable.tx" value="Enabled"/>
+    <property object="PORTIO" propertyId="portio.usart1.location.usart1" value="1"/>
+    <property object="USART1" propertyId="ABPeripheral.included" value="true"/>
   </mode>
   <modeTransition>
     <property object="RESET &#x2192; DefaultMode" propertyId="modeTransition.target" value="DefaultMode"/>

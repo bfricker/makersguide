@@ -20,10 +20,14 @@
 #include "em_i2c.h"
 #include "utilities.h"
 #include "adxl.h"
+#include "em_emu.h"
+#include "em_gpio.h"
 
 #define DEVICE_ID			0xE5
 #define CMD_ARRAY_SIZE		1
 #define DATA_ARRAY_SIZE		10
+#define FREE_FALL_INT_PIN	12
+#define ACTIVITY_INT_PIN	11
 
 // Globals for persistent storage
 uint8_t cmd_array[CMD_ARRAY_SIZE];
@@ -102,10 +106,32 @@ void ADXL_init(void)
 	}
 
 	// Set range to 16g and FULL resolution
-	i2c_write_register(ADXL345_REG_DATA_FORMAT, ADXL345_RANGE_16_G);
+	i2c_write_register(ADXL345_REG_DATA_FORMAT, ADXL345_RANGE_16_G );
 
 	// ADXL_BW_RATE = 50 hz, limited by I2C speed
 	i2c_write_register(ADXL345_REG_BW_RATE, ADXL345_DATARATE_50_HZ);
+
+	// Set up threshold for activity, found through trial and error
+	i2c_write_register(ADXL345_REG_THRESH_ACT, 0x90);
+
+	// Turn on the axes that will participate
+	i2c_write_register(ADXL345_REG_ACT_INACT_CTL, ADXL345_ACT_ac_dc | ADXL345_ACT_X | ADXL345_ACT_Y | ADXL345_ACT_Z);
+
+	// Set up free fall thresh
+	i2c_write_register(ADXL345_REG_THRESH_FF, 0x6);
+
+	// Set up free fall time
+	i2c_write_register(ADXL345_REG_TIME_FF, 0x20);
+
+	// Set up interrupt outputs
+	i2c_write_register(ADXL345_REG_INT_ENABLE, ADXL345_INT_FREE_FALL | ADXL345_INT_Activity );
+	//i2c_write_register(ADXL345_REG_INT_ENABLE, ADXL345_INT_FREE_FALL );
+
+	// Route ADXL345_INT_Activity to INT1 and ADXL345_INT_FREE_FALL to INT2
+	i2c_write_register(ADXL345_REG_INT_MAP, ADXL345_INT_FREE_FALL);
+
+	// Clear interrupts by reading the INT_SOURCE register
+	i2c_read_register(ADXL345_REG_INT_SOURCE);
 
 	// Start measurement
 	i2c_write_register(ADXL345_REG_POWER_CTL, 0x08);
@@ -127,6 +153,19 @@ accel_sample_struct read_accel_data(void)
 	return sample;
 }
 
+// This will get called whenever the GPIO interrupt occurs
+// when we pass it into the set_gpio_interrupt function below
+int GPIO_int_callback(uint8_t pin)
+{
+	bool pin_state = GPIO_PinInGet(gpioPortB, pin);
+
+	// Set the appropriate LED based on the state of the INT1/INT2 pin
+	if (pin == ACTIVITY_INT_PIN) set_led(0,pin_state);
+	if (pin == FREE_FALL_INT_PIN) set_led(1,pin_state);
+
+	return 0;
+}
+
 /**************************************************************************//**
  * @brief  Main function
  *****************************************************************************/
@@ -142,16 +181,21 @@ int main(void)
 
 	ADXL_init();
 
-	// Print header
-	print("\n   x      y    z\r\n");
+	set_gpio_interrupt(gpioPortB,  ACTIVITY_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
+	set_gpio_interrupt(gpioPortB,  FREE_FALL_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
 
-	// Infinite loop
 	while (1)
 	{
-		sample = read_accel_data();
+		EMU_EnterEM2(false);
 
-		// The \r will cause the last line to be overwritten
-		print("\r%5d %5d %5d", sample.x, sample.y, sample.z);
-		delay(100);
+		// Wait a second
+		delay(1000);
+
+		// Clear interrupts by reading the INT_SOURCE register
+		i2c_read_register(ADXL345_REG_INT_SOURCE);
+
+		// Clear the LED for both (could clobber one that just came in)
+		set_led(1,0);
+		set_led(0,0);
 	}
 }

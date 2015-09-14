@@ -72,7 +72,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/main_offboard_led.c|src/main_external_light_strip_toggle.c|src/main_external_light_strip_toggle_em4.c|src/offboard_led.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="src/main_external_light_strip.c|src/main_offboard_led.c|src/main_external_light_strip_toggle.c|src/offboard_led.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -147,7 +147,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/main_offboard_led.c|src/main_external_light_strip_toggle.c|src/main_external_light_strip_toggle_em4.c|src/offboard_led.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="src/main_external_light_strip.c|src/main_offboard_led.c|src/main_external_light_strip_toggle.c|src/offboard_led.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

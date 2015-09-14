@@ -72,7 +72,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/main_systick.c|src/main_pwm_fading.c|src/main_pwm_dimming.c|src/pwm_chasing.c|src/pwm_dimming.c|src/systick.c|src/lesson5_systick.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="src/main_pwm_chasing.c|src/main_systick.c|src/main_pwm_dimming.c|src/pwm_chasing.c|src/pwm_dimming.c|src/systick.c|src/lesson5_systick.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -147,7 +147,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/main_systick.c|src/main_pwm_fading.c|src/main_pwm_dimming.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="src/main_pwm_chasing.c|src/main_systick.c|src/main_pwm_dimming.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
