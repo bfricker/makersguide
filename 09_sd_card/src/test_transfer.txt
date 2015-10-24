@@ -1,0 +1,15 @@
+Test transfer document.  Used to see if the data transfer from
+the host computer can get to the MCU and back again OK.
+
+This file is big enough to use both of the two RAM buffers that are
+256kb each.  
+
+This newlines in this file are in PC format. The handling of newlines
+are not consistent across PC, Linux, Mac, and not even across terminal
+programs that you may encounter.  In my case, I have to add \r to every
+\n when I print information to TeraTerm.  Yet, I have to add \n to every 
+\r if the data originates on LEUART coming from TeraTerm.  I have not
+handled it very completely in my code.
+
+That is all.  Have a good time with your EFM32 Starter Kit
+and The Maker's Guide to the IoT!!

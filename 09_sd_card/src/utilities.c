@@ -120,7 +120,7 @@ void set_led(int number, int level)
 	}
 }
 
-
+// Set up the USART0 clock before calling this function
 void setup_utilities()
 {
 	if (SysTick_Config(CMU_ClockFreqGet(cmuClock_CORE) / 1000))
@@ -134,7 +134,12 @@ void setup_utilities()
 	NVIC_ClearPendingIRQ(USART0_TX_IRQn);
 	NVIC_EnableIRQ(USART0_TX_IRQn);
 
-	// Note: Must configure USART0 pins and clocks elsewhere!
+	USART_IntClear(USART0, USART_IF_RXDATAV);
+	USART_IntEnable(USART0, USART_IF_RXDATAV);
+	NVIC_ClearPendingIRQ(USART0_RX_IRQn);
+	NVIC_EnableIRQ(USART0_RX_IRQn);
+
+	// Note: Must configure USART0 pins and clocks elsewhere!  BEFORE calling this function
 }
 
 void SysTick_Handler(void)
