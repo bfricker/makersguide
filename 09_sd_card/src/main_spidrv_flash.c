@@ -20,6 +20,9 @@
 SPIDRV_HandleData_t handleData;
 SPIDRV_Handle_t handle = &handleData;
 
+#define PAGE_SIZE			256
+#define SPI_TRANSFER_SIZE 	PAGE_SIZE + 4  // Account for SPI header
+
 void spidrv_setup()
 {
 	// Set up the necessary peripheral clocks
@@ -83,18 +86,18 @@ void chip_erase()
 
 void read_memory(uint32_t address, uint8_t result[], uint32_t num_of_bytes)
 {
-	uint8_t tx_data[256+4];
-	uint8_t rx_data[256+4];
+	uint8_t tx_data[SPI_TRANSFER_SIZE];
+	uint8_t rx_data[SPI_TRANSFER_SIZE];
 
 	tx_data[0] = READ_DATA;
 	tx_data[1] = (address >> 16);
 	tx_data[2] = (address >> 8);
 	tx_data[3] = address;
 
-	SPIDRV_MTransferB( handle, &tx_data, &rx_data, num_of_bytes);
+	SPIDRV_MTransferB( handle, &tx_data, &rx_data, SPI_TRANSFER_SIZE);
 
 	// Fill the result from the right index
-	for (int i=0; i< 256; i++)
+	for (int i=0; i< PAGE_SIZE; i++)
 	{
 		result[i] = rx_data[i+4];
 	}
@@ -102,25 +105,25 @@ void read_memory(uint32_t address, uint8_t result[], uint32_t num_of_bytes)
 
 void write_memory(uint32_t address, uint8_t data_buffer[], uint32_t num_of_bytes)
 {
-	if (num_of_bytes > 256) DEBUG_BREAK
+	if (num_of_bytes > PAGE_SIZE) DEBUG_BREAK
 
 	uint8_t status;
-	uint8_t dummy_rx[256+4];
-	uint8_t tx_data[256 + 4];  // Need room for cmd + three address bytes
+	uint8_t dummy_rx[SPI_TRANSFER_SIZE];
+	uint8_t tx_data[SPI_TRANSFER_SIZE];  // Need room for cmd + three address bytes
 
 	tx_data[0] = PAGE_PROGRAM;
 	tx_data[1] = (address >> 16);
 	tx_data[2] = (address >> 8);
 	tx_data[3] = address;
 
-	for (int i=0; i < 256; i++)
+	for (int i=0; i < PAGE_SIZE; i++)
 	{
 		if (i >= num_of_bytes) break;
 		tx_data[i+4] = data_buffer[i];
 	}
 
 	config_write(WR_ENABLE);
-	SPIDRV_MTransferB( handle, &tx_data, &dummy_rx, num_of_bytes);
+	SPIDRV_MTransferB( handle, &tx_data, &dummy_rx, SPI_TRANSFER_SIZE);
 
 	do 	status = read_status();
 	while (status & WIP_BIT);
@@ -149,8 +152,8 @@ int main(void)
 
 	delay(100);
 
-	uint8_t result[256];
-	uint8_t tx_data[256];
+	uint8_t result[PAGE_SIZE];
+	uint8_t tx_data[PAGE_SIZE];
 
 	tx_data[0] = JEDEC_ID_CMD;
 
@@ -168,12 +171,12 @@ int main(void)
 		for (int i=0; i < 256; i++) tx_data[i] = i;
 
 		chip_erase();
-		read_memory(0, result, 256);
-		write_memory(0, tx_data, 256);
-		read_memory(0, result, 256);
+		read_memory(0, result, PAGE_SIZE);
+		write_memory(0, tx_data, PAGE_SIZE);
+		read_memory(0, result, PAGE_SIZE);
 	}
 
-	read_memory(0, result, 256);
+	read_memory(0, result, PAGE_SIZE);
 
 	while (1)
 		;
