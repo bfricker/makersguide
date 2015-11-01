@@ -46,13 +46,8 @@
 
 unsigned int dma_channel;
 
-//// DMA callback structure
-//DMA_CB_TypeDef dma_callback;
-
 // Transfer Flag
 volatile bool dma_in_progress;
-//
-//#define DMA_CHANNEL		0
 
 // Structs for LED driver
 typedef struct LED_bit_fields
@@ -68,6 +63,9 @@ typedef struct LED_stream
 } LED_stream_struct;
 
 LED_stream_struct stream;
+
+// This must be global to be used for DMA
+uint8_t stream_buffer[MAX_STREAM_BIT_LEN/8];
 
 typedef struct color_code_bits
 {
@@ -87,10 +85,6 @@ typedef struct color_code_bits
 
 void dma_transfer_complete(unsigned int channel, bool primary, void *user)
 {
-	(void) channel;
-	(void) primary;
-	(void) user;
-
 	// Clear flag to indicate that transfer is complete
 	dma_in_progress = false;
 }
@@ -150,7 +144,6 @@ uint8_t pack_gs_byte(uint8_t byte_position)
 
 void write_serial_stream()
 {
-	uint8_t stream_buffer[MAX_STREAM_BIT_LEN/8];
 	int length;
 
 	// Must pack the bits in backwards for DMA driver
@@ -214,7 +207,6 @@ void write_serial_stream()
 	for (volatile int i=0; i < 100; i++)
 			;
 	GPIO_PinOutClear(CONTROL_PORT, XLAT_PIN);
-
 }
 
 // Sets the color in memory but does not write it
@@ -297,11 +289,21 @@ int main(void)
 	CMU_ClockEnable(cmuClock_GPIO, true);
 	CMU_ClockEnable(cmuClock_USART1, true);
 
+	Ecode_t result;
+
 	// Initialize DMA.
-	DMADRV_Init();
+	result = DMADRV_Init();
+	if (result != ECODE_EMDRV_DMADRV_OK)
+	{
+		DEBUG_BREAK
+	}
 
 	// Request a DMA channel.
-	DMADRV_AllocateChannel( &dma_channel, NULL );
+	result = DMADRV_AllocateChannel( &dma_channel, NULL );
+	if (result != ECODE_EMDRV_DMADRV_OK)
+	{
+		DEBUG_BREAK
+	}
 
 	// Configure the USART peripheral
 	USART_InitSync_TypeDef init = USART_INITSYNC_DEFAULT;
