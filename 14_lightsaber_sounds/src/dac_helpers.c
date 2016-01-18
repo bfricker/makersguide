@@ -83,7 +83,7 @@ bool send_zeros = true;
 UINT    bytes_read = 0;
 
 #define MAX_TRACKS 3
-wav_files file_array[MAX_TRACKS] = {{"sweet4.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
+wav_files file_array[MAX_TRACKS] = {{"sweet6.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
 
 /***************************************************************************//**
  * @brief
@@ -122,7 +122,7 @@ DWORD get_fattime(void)
  * @param primary
  *   Fill primary or alternate DMA buffer with data.
  *****************************************************************************/
-void FillBufferFromSDcard(bool stereo, bool primary)
+void FillBufferFromSDcard(uint8_t channels, bool primary)
 {
   UINT     bytes_read;
   int16_t  * buffer;
@@ -139,7 +139,7 @@ void FillBufferFromSDcard(bool stereo, bool primary)
     buffer = ramBufferDacData1Stereo;
   }
 
-  if (stereo)
+  if (channels > 1)
   {
     /* Stereo, Store Left and Right data interlaced as in wavfile */
     /* DMA is writing the data to the combined register as interlaced data*/
@@ -148,18 +148,30 @@ void FillBufferFromSDcard(bool stereo, bool primary)
     f_read(&WAVfile, buffer, 4 * BUFFERSIZE, &bytes_read);
     ByteCounter += bytes_read;
 
+
     for (i = 0; i < 2 * BUFFERSIZE; i++)
     {
-      tmp = buffer[i];
+      if (!(i & 1))
+      {
+    	  tmp = 0;
+      }
+      tmp += buffer[i];
 
 //      /* Convert from signed to unsigned */
 //      tmp = buffer[i] + 0x8000;
 //
-//      /* Convert to 12 bits */
-//      tmp >>= 4;
+      if (i & 1)
+      {
+    	  /* Convert to 12 bits */
+    	  tmp >>= 4;
 
-      buffer[i] = tmp;
+    	  buffer[i-1] = tmp;
+    	  buffer[i] = tmp;
+      }
     }
+//    tmp >>= 4;
+//    buffer[0] = tmp;
+//    buffer[1] = tmp;
   }
   else /* Mono */
   {
@@ -175,8 +187,8 @@ void FillBufferFromSDcard(bool stereo, bool primary)
 //      /* Convert from signed to unsigned */
 //      tmp = ramBufferTemporaryMono[j] + 0x8000;
 //
-//      /* Convert to 12 bits */
-//      tmp >>= 4;
+      /* Convert to 12 bits */
+      tmp >>= 4;
 
 	  /* Make sample 12 bits and unsigned */
 	  buffer[ i     ] = tmp;
@@ -201,7 +213,7 @@ void PingPongTransferComplete(unsigned int channel, bool primary, void *user)
   (void) channel;              /* Unused parameter */
   (void) user;                 /* Unused parameter */
 
-  FillBufferFromSDcard((bool) wavHeader.channels, primary);
+  FillBufferFromSDcard( wavHeader.channels, primary);
 
   if ( DMA->IF & DMA_IF_CH0DONE )           /* Did a DMA complete while   */
   {                                         /* reading from the SD Card ? */
@@ -427,8 +439,8 @@ void prepare_microsd_card(char *filename)
 	f_read(&WAVfile, &wavHeader, sizeof(wavHeader), &bytes_read);
 
 	/* Fill both primary and alternate RAM-buffer before start */
-	FillBufferFromSDcard((bool) wavHeader.channels, true);
-	FillBufferFromSDcard((bool) wavHeader.channels, false);
+	FillBufferFromSDcard( wavHeader.channels, true);
+	FillBufferFromSDcard( wavHeader.channels, false);
 }
 
 void play_sound(const int track)
