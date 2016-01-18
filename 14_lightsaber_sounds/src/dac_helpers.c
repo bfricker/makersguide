@@ -198,8 +198,8 @@ void FillBufferFromSDcard(uint8_t channels, bool primary)
 			f_read(&additional_tracks[track_num].file_object, tmp_buffer[track_num],
 					BUFFERSIZE*2, &bytes_read);
 			additional_tracks[track_num].bytes_processed += bytes_read;
-			track_num++;
 		}
+		track_num++;
 	}
 	/////////////////////////////////////////////////////////////////////////////////////
 

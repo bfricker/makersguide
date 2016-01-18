@@ -22,6 +22,24 @@
 #include "dac_helpers.h"
 #include "utilities.h"
 #include <stdlib.h>
+#include "adxl.h"
+#include "utilities.h"
+
+#define FREE_FALL_INT_PIN	12
+#define ACTIVITY_INT_PIN	11
+
+// This will get called whenever the GPIO interrupt occurs
+// when we pass it into the set_gpio_interrupt function below
+int GPIO_int_callback(uint8_t pin)
+{
+	bool pin_state = GPIO_PinInGet(gpioPortB, pin);
+
+	// Set the appropriate LED based on the state of the INT1/INT2 pin
+	if (pin == ACTIVITY_INT_PIN) set_led(0,pin_state);
+	if (pin == FREE_FALL_INT_PIN) set_led(1,pin_state);
+
+	return 0;
+}
 
 int main(void)
 {
@@ -45,6 +63,21 @@ int main(void)
 		DEBUG_BREAK;
 	}
 
+	i2c_setup();
+
+	// Offset zero is Device ID
+	uint16_t value = i2c_read_register(ADXL345_REG_DEVID);
+
+	if (value != DEVICE_ID)
+	{
+		DEBUG_BREAK
+	}
+
+	i2c_init_registers();
+
+	set_gpio_interrupt(gpioPortB,  ACTIVITY_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
+	set_gpio_interrupt(gpioPortB,  FREE_FALL_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
+
 	int track = get_next_track();
 	play_sound(track);
 	DAC_setup();
@@ -52,33 +85,32 @@ int main(void)
 
 	add_track("sweet5.wav");
 
-	uint32_t additional_timer = set_timeout_ms(10000);
+	//uint32_t additional_timer = set_timeout_ms(10000);
+	uint32_t adxl_debounce_timer = set_timeout_ms(500);
 
 	while (1)
 	{
 		play_sound(track);
 
-		if (expired_ms(additional_timer))
+		// Clear interrupts by reading the INT_SOURCE register
+		uint8_t int_source = i2c_read_register(ADXL345_REG_INT_SOURCE);
+		if (int_source & ADXL345_INT_Activity)
 		{
-			add_track("sweet5.wav");
-			additional_timer = set_timeout_ms(rand() % 10000 + 5000);
-		}
-	}
+			// Clear interrupts by reading the INT_SOURCE register
+			i2c_read_register(ADXL345_REG_INT_SOURCE);
 
-//	// Enable the PB1 pushbutton on the devkit
-//	setup_pushbutton();
-//
-//	while (true)
-//	{
-//		int track = get_next_track();
-//		play_sound(track);
-//
-//		// Debounce the switch...
-//		delay(750);
-//
-//		while (!get_button())
-//			;
-//	}
+			if (expired_ms(adxl_debounce_timer))
+			{
+				add_track("sweet5.wav");
+				adxl_debounce_timer = set_timeout_ms(500);
+			}
+		}
+//		if (expired_ms(additional_timer))
+//		{
+//			add_track("sweet5.wav");
+//			additional_timer = set_timeout_ms(rand() % 10000 + 5000);
+//		}
+	}
 }
 
 // Define the systick for the delay function
