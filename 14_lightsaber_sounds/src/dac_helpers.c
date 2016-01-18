@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "em_device.h"
 #include "em_common.h"
@@ -40,7 +41,7 @@ static DMA_CB_TypeDef DMAcallBack;
 
 /* Temporary buffer for use when source is mono, can't put samples directly in
  * stereo DMA buffer with f_read(). */
-static int16_t ramBufferTemporaryMono[BUFFERSIZE];
+static int16_t ramBufferTemporaryMono[BUFFERSIZE*2];
 
 /* Buffers for DMA transfer, 32 bits are transfered at a time with DMA.
  * The buffers are twice as large as BUFFERSIZE to hold both left and right
@@ -77,13 +78,23 @@ typedef struct
 /** Wav header. Global as it is used in callbacks. */
 static WAV_Header_TypeDef wavHeader;
 
-bool add_dead_time = true;
-bool send_zeros = true;
-
 UINT    bytes_read = 0;
 
 #define MAX_TRACKS 3
 wav_files file_array[MAX_TRACKS] = {{"sweet4.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
+
+// The following added for lightsaber_effects_player.c
+typedef struct
+{
+	FIL file_object;
+	uint32_t total_bytes;
+	uint32_t bytes_processed;
+} additional_tracks_struct;
+
+static additional_tracks_struct additional_tracks[MAX_TRACKS];
+static uint8_t num_of_additional_tracks = 0;
+
+bool dma_active = false;
 
 /***************************************************************************//**
  * @brief
@@ -148,7 +159,6 @@ void FillBufferFromSDcard(uint8_t channels, bool primary)
     f_read(&WAVfile, buffer, 4 * BUFFERSIZE, &bytes_read);
     ByteCounter += bytes_read;
 
-
     for (i = 0; i < 2 * BUFFERSIZE; i++)
     {
       if (!(i & 1))
@@ -157,9 +167,6 @@ void FillBufferFromSDcard(uint8_t channels, bool primary)
       }
       tmp += buffer[i];
 
-//      /* Convert from signed to unsigned */
-//      tmp = buffer[i] + 0x8000;
-//
       if (i & 1)
       {
     	  /* Convert to 12 bits */
@@ -169,28 +176,55 @@ void FillBufferFromSDcard(uint8_t channels, bool primary)
     	  buffer[i] = tmp;
       }
     }
-//    tmp >>= 4;
-//    buffer[0] = tmp;
-//    buffer[1] = tmp;
   }
   else /* Mono */
   {
     /* Read data into temporary buffer. */
-	f_read(&WAVfile, ramBufferTemporaryMono, BUFFERSIZE*2, &bytes_read);
-    ByteCounter += bytes_read;
+	if (WAVfile.fs != 0)
+	{
+		f_read(&WAVfile, ramBufferTemporaryMono, BUFFERSIZE*2, &bytes_read);
+		ByteCounter += bytes_read;
+	}
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    // This part added for lightsaber_effects_player.c
+	uint8_t track_num = 0;
+	int16_t tmp_buffer[MAX_TRACKS][BUFFERSIZE*2];
+	while (track_num < num_of_additional_tracks)
+	{
+		if (additional_tracks[track_num].total_bytes > 0)
+		{
+			// Add more sounds to ramBufferTemporaryMono as necessary
+			f_read(&additional_tracks[track_num].file_object, tmp_buffer[track_num],
+					BUFFERSIZE*2, &bytes_read);
+			additional_tracks[track_num].bytes_processed += bytes_read;
+			track_num++;
+		}
+	}
+	/////////////////////////////////////////////////////////////////////////////////////
 
     j = 0;
     for (i = 0; i < (2 * BUFFERSIZE) - 1; i += 2)
     {
       tmp = ramBufferTemporaryMono[j];
 
-//      /* Convert from signed to unsigned */
-//      tmp = ramBufferTemporaryMono[j] + 0x8000;
-//
+      /////////////////////////////////////////////////////////////////////////////////////
+      // This part added for lightsaber_effects_player.c
+	  track_num = 0;
+	  while (track_num < num_of_additional_tracks)
+	  {
+		if (additional_tracks[track_num].total_bytes > 0)
+		{
+			// Add more sounds as necessary
+			tmp += tmp_buffer[track_num][j];
+		}
+		track_num++;
+	  }
+	  ///////////////////////////////////////////////////////////////////////////////////
+
       /* Convert to 12 bits */
       tmp >>= 4;
 
-	  /* Make sample 12 bits and unsigned */
 	  buffer[ i     ] = tmp;
 	  buffer[ i + 1 ] = tmp;
       j++;
@@ -233,13 +267,38 @@ void PingPongTransferComplete(unsigned int channel, bool primary, void *user)
   }
 
   /* Stop DMA if bytecounter is equal to datasize or larger */
-  bool stop = false;
+  bool stop = true;
 
   if (ByteCounter >= wavHeader.bytes_in_data)
   {
-	stop = true;
 	f_close(&WAVfile);
   }
+  else
+  {
+	  stop = false;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////////
+  // This part added for lightsaber_effects_player.c
+  for (int track_num=0; track_num < MAX_TRACKS; track_num++)
+  {
+	  if (additional_tracks[track_num].total_bytes > 0)
+	  {
+		  if (additional_tracks[track_num].bytes_processed >=
+			      additional_tracks[track_num].total_bytes)
+		  {
+				f_close(&additional_tracks[track_num].file_object);
+				additional_tracks[track_num].bytes_processed = 0;
+				additional_tracks[track_num].total_bytes = 0;
+				num_of_additional_tracks--;
+		  }
+		  else
+		  {
+			  stop = false;
+		  }
+	   }
+  }
+  /////////////////////////////////////////////////////////////////////////////////////
 
   /* Refresh the DMA control structure */
   DMA_RefreshPingPong(0,
@@ -253,6 +312,12 @@ void PingPongTransferComplete(unsigned int channel, bool primary, void *user)
                       BUFFERSIZE - 1,
 #endif
                       stop);
+
+  if (stop)
+  {
+	  dma_active = false;
+  }
+
 }
 
 #ifndef USE_I2S
@@ -406,6 +471,8 @@ void DMA_setup(void)
 					   (void *) &(DAC0->COMBDATA),
                        (void *) &ramBufferDacData1Stereo,
                        BUFFERSIZE - 1);
+
+  dma_active = true;
 }
 
 /**************************************************************************//**
@@ -414,7 +481,7 @@ void DMA_setup(void)
  * @details
  *   Opens card, reads filename, fills buffers for the first time
  *****************************************************************************/
-void prepare_microsd_card(char *filename)
+void prepare_microsd_card()
 {
 	/* Initialize filesystem */
 	MICROSD_Init();
@@ -424,6 +491,32 @@ void prepare_microsd_card(char *filename)
 	{
 	/* No micro-SD with FAT32 is present */
 		DEBUG_BREAK
+	}
+
+//	/* Open wav file from SD-card */
+//	if (f_open(&WAVfile, filename, FA_READ) != FR_OK)
+//	{
+//	/* No micro-SD with FAT32, or no WAV_FILENAME found */
+//		DEBUG_BREAK
+//	}
+//
+//	ByteCounter = 0;
+//
+//	/* Read header and place in header struct */
+//	f_read(&WAVfile, &wavHeader, sizeof(wavHeader), &bytes_read);
+//
+//	/* Fill both primary and alternate RAM-buffer before start */
+//	FillBufferFromSDcard( wavHeader.channels, true);
+//	FillBufferFromSDcard( wavHeader.channels, false);
+}
+
+void open_file(char * filename)
+{
+	static bool first_time = true;
+
+	if (first_time)
+	{
+		prepare_microsd_card();
 	}
 
 	/* Open wav file from SD-card */
@@ -438,18 +531,30 @@ void prepare_microsd_card(char *filename)
 	/* Read header and place in header struct */
 	f_read(&WAVfile, &wavHeader, sizeof(wavHeader), &bytes_read);
 
-	/* Fill both primary and alternate RAM-buffer before start */
-	FillBufferFromSDcard( wavHeader.channels, true);
-	FillBufferFromSDcard( wavHeader.channels, false);
+	if (first_time)
+	{
+		/* Fill both primary and alternate RAM-buffer before start */
+		FillBufferFromSDcard( wavHeader.channels, true);
+		FillBufferFromSDcard( wavHeader.channels, false);
+		first_time = false;
+	}
 }
+
 
 void play_sound(const int track)
 {
+	// If already playing, to restart it
+	if (WAVfile.fs != 0) return;
+
 	char * s = file_array[track].filename;
-	prepare_microsd_card(s);
+	//prepare_microsd_card(s);
+	open_file(s);
 
 	/* Setup DMA and peripherals */
-	DMA_setup();
+	if (!dma_active)
+	{
+		DMA_setup();
+	}
 }
 
 int get_next_track()
@@ -460,3 +565,41 @@ int get_next_track()
 	if (track == MAX_TRACKS) track = 0;
 	return result;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+// This function added for lightsaber_effects_player.c
+// It must be used aftet play_sounds has been called
+// All sound effects must have same sample rate and have a single mono channel
+void add_track(char * filename)
+{
+	// If we have exceeded the number of avail tracks, return
+	if (num_of_additional_tracks >= MAX_TRACKS) return;
+
+	// Find an available track
+	uint8_t track_num = 0;
+	while (track_num < MAX_TRACKS)
+	{
+		if (additional_tracks[track_num].file_object.fs == 0)
+		{
+			break;
+		}
+		track_num++;
+	}
+
+	if (track_num >= MAX_TRACKS) return;
+
+	/* Open wav file from SD-card */
+	if (f_open(&additional_tracks[track_num].file_object, filename, FA_READ) != FR_OK)
+	{
+	/* No micro-SD with FAT32, or no WAV_FILENAME found */
+		DEBUG_BREAK
+	}
+
+	/* Read header and place in header struct */
+	WAV_Header_TypeDef tmp_header;
+	UINT bytes_read;
+	f_read(&additional_tracks[track_num].file_object, &tmp_header, sizeof(tmp_header), &bytes_read);
+	additional_tracks[track_num].total_bytes = tmp_header.bytes_in_data;
+	num_of_additional_tracks++;
+}
+/////////////////////////////////////////////////////////////////////////////////////
