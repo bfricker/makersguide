@@ -83,7 +83,7 @@ bool send_zeros = true;
 UINT    bytes_read = 0;
 
 #define MAX_TRACKS 3
-wav_files file_array[MAX_TRACKS] = {{"sweet6.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
+wav_files file_array[MAX_TRACKS] = {{"sweet4.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
 
 /***************************************************************************//**
  * @brief
@@ -176,7 +176,7 @@ void FillBufferFromSDcard(uint8_t channels, bool primary)
   else /* Mono */
   {
     /* Read data into temporary buffer. */
-	f_read(&WAVfile, ramBufferTemporaryMono, BUFFERSIZE, &bytes_read);
+	f_read(&WAVfile, ramBufferTemporaryMono, BUFFERSIZE*2, &bytes_read);
     ByteCounter += bytes_read;
 
     j = 0;
