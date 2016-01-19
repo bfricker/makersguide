@@ -118,7 +118,7 @@ void i2c_init_registers()
 	// Set up interrupt outputs, sent to INT1 pin by default
 	i2c_write_register(ADXL345_REG_INT_ENABLE, ADXL345_INT_Activity );
 
-	uint32_t value = i2c_read_register(ADXL345_REG_INT_ENABLE);
+	//uint32_t value = i2c_read_register(ADXL345_REG_INT_ENABLE);
 
 	// Clear interrupts by reading the INT_SOURCE register
 	i2c_read_register(ADXL345_REG_INT_SOURCE);

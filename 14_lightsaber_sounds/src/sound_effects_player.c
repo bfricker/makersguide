@@ -44,27 +44,11 @@ int main(void)
 		DEBUG_BREAK;
 	}
 
-	int track = get_next_track();
-	play_sound(track);
+	play_sound(TEST_SOUND4);
 	DAC_setup();
 	DAC_TIMER_setup();
 
 	while (1) ;
-
-//	// Enable the PB1 pushbutton on the devkit
-//	setup_pushbutton();
-//
-//	while (true)
-//	{
-//		int track = get_next_track();
-//		play_sound(track);
-//
-//		// Debounce the switch...
-//		delay(750);
-//
-//		while (!get_button())
-//			;
-//	}
 }
 
 // Define the systick for the delay function

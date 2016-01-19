@@ -78,19 +78,16 @@ int main(void)
 	set_gpio_interrupt(gpioPortB,  ACTIVITY_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
 	set_gpio_interrupt(gpioPortB,  FREE_FALL_INT_PIN, true, false, (GPIOINT_IrqCallbackPtr_t) GPIO_int_callback);
 
-	int track = get_next_track();
-	play_sound(track);
+	// We need to start the sound, which starts DMA, before we set up the DAC_TIMER
+	play_sound(SABER_IDLE);
 	DAC_setup();
 	DAC_TIMER_setup();
 
-	add_track("sweet5.wav");
-
-	//uint32_t additional_timer = set_timeout_ms(10000);
 	uint32_t adxl_debounce_timer = set_timeout_ms(500);
 
 	while (1)
 	{
-		play_sound(track);
+		play_sound(SABER_IDLE);
 
 		// Clear interrupts by reading the INT_SOURCE register
 		uint8_t int_source = i2c_read_register(ADXL345_REG_INT_SOURCE);
@@ -101,15 +98,10 @@ int main(void)
 
 			if (expired_ms(adxl_debounce_timer))
 			{
-				add_track("sweet5.wav");
+				add_track(SABER_SWING);
 				adxl_debounce_timer = set_timeout_ms(500);
 			}
 		}
-//		if (expired_ms(additional_timer))
-//		{
-//			add_track("sweet5.wav");
-//			additional_timer = set_timeout_ms(rand() % 10000 + 5000);
-//		}
 	}
 }
 

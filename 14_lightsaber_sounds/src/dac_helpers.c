@@ -20,7 +20,6 @@
 #include "ff.h"
 #include "microsd.h"
 #include "diskio.h"
-#include "bsp.h"
 #include "utilities.h"
 #include "dac_helpers.h"
 
@@ -81,7 +80,6 @@ static WAV_Header_TypeDef wavHeader;
 UINT    bytes_read = 0;
 
 #define MAX_TRACKS 3
-wav_files file_array[MAX_TRACKS] = {{"sweet4.wav"}, {"sweet5.wav"}, {"sweet6.wav"}};
 
 // The following added for lightsaber_effects_player.c
 typedef struct
@@ -492,22 +490,6 @@ void prepare_microsd_card()
 	/* No micro-SD with FAT32 is present */
 		DEBUG_BREAK
 	}
-
-//	/* Open wav file from SD-card */
-//	if (f_open(&WAVfile, filename, FA_READ) != FR_OK)
-//	{
-//	/* No micro-SD with FAT32, or no WAV_FILENAME found */
-//		DEBUG_BREAK
-//	}
-//
-//	ByteCounter = 0;
-//
-//	/* Read header and place in header struct */
-//	f_read(&WAVfile, &wavHeader, sizeof(wavHeader), &bytes_read);
-//
-//	/* Fill both primary and alternate RAM-buffer before start */
-//	FillBufferFromSDcard( wavHeader.channels, true);
-//	FillBufferFromSDcard( wavHeader.channels, false);
 }
 
 void open_file(char * filename)
@@ -540,30 +522,21 @@ void open_file(char * filename)
 	}
 }
 
-
-void play_sound(const int track)
+// This is the base sound that must always be playing in order
+// for additional sounds to play.  The sample rate is derived from
+// this first file
+void play_sound(char * filename)
 {
 	// If already playing, to restart it
 	if (WAVfile.fs != 0) return;
 
-	char * s = file_array[track].filename;
-	//prepare_microsd_card(s);
-	open_file(s);
+	open_file(filename);
 
 	/* Setup DMA and peripherals */
 	if (!dma_active)
 	{
 		DMA_setup();
 	}
-}
-
-int get_next_track()
-{
-	static int track = 0;
-	int result = track;
-	track++;
-	if (track == MAX_TRACKS) track = 0;
-	return result;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
