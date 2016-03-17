@@ -22,6 +22,7 @@
 #include "adxl.h"
 #include "em_emu.h"
 #include "em_gpio.h"
+#include "bsp_trace.h"
 
 #define DEVICE_ID			0xE5
 #define CMD_ARRAY_SIZE		1
@@ -32,6 +33,8 @@
 // Globals for persistent storage
 uint8_t cmd_array[CMD_ARRAY_SIZE];
 uint8_t data_array[DATA_ARRAY_SIZE];
+
+bool interrupt_triggered = false;
 
 typedef struct accel_sample_data
 {
@@ -160,8 +163,12 @@ int GPIO_int_callback(uint8_t pin)
 	//bool pin_state = GPIO_PinInGet(gpioPortB, pin);
 
 	// Set the appropriate LED based on the state of the INT1/INT2 pin
-	if (pin == ACTIVITY_INT_PIN) set_led(0,1);
-	if (pin == FREE_FALL_INT_PIN) set_led(1,1);
+
+	// These removed to not impact the current measurments
+	//if (pin == ACTIVITY_INT_PIN) set_led(0,1);
+	//if (pin == FREE_FALL_INT_PIN) set_led(1,1);
+
+	interrupt_triggered = true;
 
 	return 0;
 }
@@ -172,6 +179,8 @@ int GPIO_int_callback(uint8_t pin)
 int main(void)
 {
 	CHIP_Init();
+
+	BSP_TraceProfilerSetup();
 
 	enter_DefaultMode_from_RESET();
 
@@ -186,16 +195,22 @@ int main(void)
 
 	while (1)
 	{
-		EMU_EnterEM2(false);
+		EMU_EnterEM1();
+		//EMU_EnterEM2(false);
 
-		// Wait a second
-		delay(1000);
+		if (interrupt_triggered)
+		{
+			interrupt_triggered = false;
 
-		// Clear interrupts by reading the INT_SOURCE register
-		i2c_read_register(ADXL345_REG_INT_SOURCE);
+			// Wait a second
+			delay(1000);
 
-		// Clear the LED for both
-		set_led(1,0);
+			// Clear interrupts by reading the INT_SOURCE register
+			i2c_read_register(ADXL345_REG_INT_SOURCE);
+
+			// Clear the LED for both
+			set_led(1,0);
 			set_led(0,0);
+		}
 	}
 }
