@@ -42,7 +42,7 @@ int main(void)
 	  // Turn off the LED
 	  GPIO_PinModeSet(gpioPortE, 2, gpioModePushPull, 0);
 
-	  // Add some more delay
+	  // Add some more delay!
 	  for(volatile long i=0; i<100000; i++);
 		  ;
   }
